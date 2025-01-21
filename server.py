@@ -69,4 +69,4 @@ def upload_video():
 if __name__ == '__main__':
     if not os.path.exists('uploaded_videos'):
         os.makedirs('uploaded_videos')
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
