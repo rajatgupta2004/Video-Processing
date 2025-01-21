@@ -35,7 +35,7 @@ Make sure you have the following installed:
 4. **Start the development server**
 
    ```bash
-   npm start
+   npm run dev
    ```
 
    This will launch the application in your default browser at `http://localhost:3000`.
@@ -47,3 +47,31 @@ Make sure you have the following installed:
    ```bash
    npm run build
    ```
+
+   This command will generate a `build` folder containing the production build of the application.
+
+### Starting the Flask Server
+
+Follow these steps to start the Flask server:
+
+1. **Navigate to the Flask server directory**
+
+   Ensure you are in the correct directory where the Flask app is located.
+
+
+2. **Install dependencies**
+
+   ```bash
+   pip install Flask flask-cors opencv-python numpy
+
+   ```
+
+3. **Run the Flask server**
+
+   ```bash
+   python server.py
+   ```
+
+   The Flask server will start, and you can access it at `http://127.0.0.1:5000`.
+
+now you can go to website it will work.
