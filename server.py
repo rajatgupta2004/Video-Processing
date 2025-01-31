@@ -3,43 +3,69 @@ from flask_cors import CORS
 import cv2
 import numpy as np
 import os
+import ast
 
 app = Flask(__name__)
 CORS(app)
 
 @app.route('/upload', methods=['POST'])
-def upload_video():
+def process_video():
     try:
         video_file = request.files['video']
-        roi = request.form.get('roi')
-        selected_point = request.form.get('selected_point')
 
-        # Parse ROI and selected point
-        roi = [int(x) for x in roi.split(',')]
-        selected_x, selected_y = [int(x) for x in selected_point.split(',')]
-
+        # Save the video file to a temporary location
         video_path = os.path.join('uploaded_videos', video_file.filename)
         video_file.save(video_path)
 
+        # Read the video file from the temporary location
         video = cv2.VideoCapture(video_path)
+
+        frame_rate = video.get(cv2.CAP_PROP_FPS)
         total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        # Calculate the middle frame number
+        mid_frame_number = total_frames // 2
+        # Set the frame position to the middle frame
+        video.set(cv2.CAP_PROP_POS_FRAMES, mid_frame_number)
+        ret, mid_frame = video.read()
 
         # Function to crop a region of interest (ROI)
         def crop_frame(frame, roi):
             x, y, w, h = roi
             return frame[y:y+h, x:x+w]
 
+        # Read the first frame for user ROI selection
+        video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        ret, first_frame = video.read()
+
+        # Parse ROI from the request
+        string = request.form.get('roi')
+        roi = ast.literal_eval(string)
+
+        # Crop the image based on selected ROI
+        cropped_frame = crop_frame(first_frame, roi)
+
+        # Parse selected point from the request
+        selected_x = int(request.form.get('spx')) - roi[0]
+        selected_y = int(request.form.get('spy')) - roi[1]
+
+        # Ensure the selected point is within the bounds of the cropped frame
+        if not (0 <= selected_x < cropped_frame.shape[1] and 0 <= selected_y < cropped_frame.shape[0]):
+            return jsonify({'message': 'Error: Selected point is outside the bounds of the cropped frame'})
+
         # Arrays to store intensity values and timestamps
         intensity_values = np.zeros(total_frames)
         time_stamps = np.zeros(total_frames)
 
-        # Loop through each frame to extract intensity at the selected point
+        # Reset video to the first frame
+        video.set(cv2.CAP_PROP_POS_FRAMES, 0)
         frame_count = 0
+
+        # Loop through each frame to extract intensity at the selected point
         while video.isOpened():
             ret, frame = video.read()
             if not ret:
                 break
-
+            
             cropped_frame = crop_frame(frame, roi)
             gray_frame = cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2GRAY)
 
@@ -54,11 +80,14 @@ def upload_video():
         intensity_values = intensity_values[:frame_count]
         time_stamps = time_stamps[:frame_count]
 
-        # Release the video
+        # Release the video and delete the temporary file
         video.release()
+        os.remove(video_path)
 
         return jsonify({
             'message': 'Video processed successfully!',
+            'frame_rate': frame_rate,
+            'total_frames': total_frames,
             'intensity_values': intensity_values.tolist(),
             'time_stamps': time_stamps.tolist()
         })
