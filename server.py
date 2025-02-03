@@ -65,9 +65,13 @@ def process_video():
             ret, frame = video.read()
             if not ret:
                 break
-            
             cropped_frame = crop_frame(frame, roi)
-            gray_frame = cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2GRAY)
+
+            # Convert frame to grayscale if it's a color image
+            if len(cropped_frame.shape) == 3:
+                gray_frame = cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2GRAY)
+            else:
+                gray_frame = cropped_frame
 
             # Ensure the selected point is within the cropped frame boundaries
             if 0 <= selected_x < gray_frame.shape[1] and 0 <= selected_y < gray_frame.shape[0]:
